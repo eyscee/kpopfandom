@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KpopFandom</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<style>
+  body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+  }
+  .topic-row:hover { background-color: #181a1f; }
+</style>
+</head>
+
+<body class="bg-[#111315] text-[#e6e6e6]">
+
+<div class="flex min-h-screen">
+
+<!-- LEFT SIDEBAR -->
+<aside class="w-72 px-5 py-4 border-r border-[#23262b] overflow-y-auto">
+  <h1 class="text-base font-semibold mb-4">KpopFandom</h1>
+
+  <div class="space-y-2 mb-6 text-sm">
+    <div class="font-medium text-white">Latest</div>
+    <div class="text-[#9aa0a6]">New</div>
+    <div class="text-[#9aa0a6]">Unread</div>
+    <div class="text-[#9aa0a6]">Hot</div>
+  </div>
+
+  <div class="border-t border-[#23262b] pt-4 mb-4">
+    <div class="font-medium mb-2">Categories</div>
+    <div class="text-[#9aa0a6]">General</div>
+    <div class="text-[#9aa0a6]">Site Feedback</div>
+  </div>
+
+  <div class="border-t border-[#23262b] pt-4">
+    <div class="font-medium mb-2">Fandoms</div>
+    <div id="fandomList" class="space-y-1 text-xs text-[#9aa0a6]"></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 flex flex-col">
+
+  <!-- TOP BAR -->
+  <div class="flex items-center justify-between px-6 py-3 border-b border-[#23262b]">
+    <div class="flex gap-6 text-[#9aa0a6]">
+      <span class="text-white font-medium">Latest</span>
+      <span>New</span>
+      <span>Unread</span>
+      <span>Hot</span>
+    </div>
+
+    <button onclick="openCreateModal()"
+      class="bg-[#0d6efd] hover:bg-[#0b5ed7] text-white px-4 py-1.5 rounded-full text-sm font-medium">
+      + New Topic
+    </button>
+  </div>
+
+  <!-- TOPIC LIST -->
+  <div id="topics" class="flex-1"></div>
+
+</main>
+
+<!-- RIGHT SIDEBAR -->
+<aside class="w-80 px-5 py-4 border-l border-[#23262b]">
+
+  <div id="authBox" class="mb-6"></div>
+
+  <div class="border border-[#23262b] p-4">
+    <div class="font-medium mb-2">Popular Tags</div>
+    <div class="flex flex-wrap gap-2 text-xs">
+      <span class="bg-[#1c1f24] px-2 py-1">#BTS</span>
+      <span class="bg-[#1c1f24] px-2 py-1">#BLACKPINK</span>
+      <span class="bg-[#1c1f24] px-2 py-1">#EXO</span>
+      <span class="bg-[#1c1f24] px-2 py-1">#TWICE</span>
+    </div>
+  </div>
+
+</aside>
+</div>
+
+<!-- CREATE TOPIC MODAL -->
+<div id="createModal"
+class="fixed inset-0 bg-black/70 hidden items-end justify-center z-50">
+
+<div class="bg-[#181a1f] w-full max-w-4xl border border-[#23262b] rounded-t-xl shadow-xl p-4">
+
+  <div class="text-xs text-[#9aa0a6] mb-2">Create a new topic</div>
+
+  <input id="newTitle"
+    class="w-full bg-[#111315] border border-[#23262b] px-3 py-2 mb-3 text-sm"
+    placeholder="What is this discussion about in one brief sentence?">
+
+  <div class="flex gap-2 mb-3">
+    <select id="newCategory"
+      class="bg-[#111315] border border-[#23262b] px-3 py-1.5 text-sm">
+      <option>General</option>
+      <option>Site Feedback</option>
+    </select>
+
+    <input id="newTags"
+      class="flex-1 bg-[#111315] border border-[#23262b] px-3 py-1.5 text-sm"
+      placeholder="Optional tags">
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="flex items-center gap-1 border border-[#23262b] bg-[#111315] px-2 py-1 mb-2 text-[#9aa0a6] text-xs">
+    <span>A</span><span>B</span><span>I</span><span>🔗</span><span>❝</span><span>{ }</span><span>🖼️</span>
+  </div>
+
+  <textarea id="newContent"
+    class="w-full bg-[#111315] border border-[#23262b] p-3 h-40 mb-4 text-sm"
+    placeholder="Type here. Use the toolbar or Markdown for formatting. Drag or paste images."></textarea>
+
+  <div class="flex justify-between items-center">
+    <button onclick="closeCreateModal()" class="text-[#9aa0a6] hover:text-white">
+      Discard
+    </button>
+
+    <button onclick="createTopic()"
+      class="bg-[#0d6efd] hover:bg-[#0b5ed7] text-white px-5 py-1.5 rounded-full font-medium text-sm">
+      Create Topic
+    </button>
+  </div>
+
+</div>
+</div>
+
+<script>
+const supabase = supabaseJs.createClient(
+'https://ttrkrfmlhafqbiuozhza.supabase.co',
+'sb_publishable_AOFjriAO2NMdhvRFFlsG_w_-a6IwYOH'
+)
+
+let currentUser=null
+
+const fandoms=[
+'Aespa','Apink','ATEEZ','BABYMONSTER','BIGBANG','BLACKPINK','BTS','DAY6','ENHYPEN',
+'EXO','fromis_9','GFriend','(G)I-DLE','Girls\' Generation','ITZY','IVE','IZ*ONE',
+'KARA','LE SSERAFIM','LOONA','MONSTA X','NCT','NewJeans','Red Velvet','SEVENTEEN',
+'SHINee','Stray Kids','SUPER JUNIOR','TWICE','TXT','VIXX','WINNER','XG','ZEROBASEONE'
+]
+
+fandoms.sort().forEach(f=>fandomList.innerHTML+=`<div>${f}</div>`)
+
+supabase.auth.getSession().then(({data})=>{
+currentUser=data.session?.user||null
+renderAuth()
+loadTopics()
+})
+
+function renderAuth(){
+authBox.innerHTML=`
+${currentUser?`<div class="font-medium mb-2">${currentUser.email}</div>`:''}
+<button onclick="login()" class="bg-[#0d6efd] w-full py-1.5 rounded-full text-white font-medium text-sm">
+Log in
+</button>
+`
+}
+
+async function login(){
+const email=prompt('Enter your email')
+await supabase.auth.signInWithOtp({email})
+alert('Check your email')
+}
+
+function openCreateModal(){
+createModal.classList.remove('hidden')
+createModal.classList.add('flex')
+}
+function closeCreateModal(){
+createModal.classList.add('hidden')
+}
+
+async function loadTopics(){
+const {data}=await supabase.from('topics').select('*').order('created_at',{ascending:false})
+topics.innerHTML=''
+data.forEach(t=>{
+topics.innerHTML+=`
+<div class="topic-row px-6 py-4 border-b border-[#23262b] cursor-pointer">
+  <div class="font-medium text-[#5dade2]">${t.title}</div>
+  <div class="text-xs text-[#9aa0a6] mt-1">${t.category}</div>
+</div>`
+})
+}
+
+async function createTopic(){
+if(!currentUser)return alert('Login required')
+await supabase.from('topics').insert({
+title:newTitle.value,
+content:newContent.value,
+category:newCategory.value,
+tags:newTags.value,
+user_id:currentUser.id
+})
+closeCreateModal()
+loadTopics()
+}
+</script>
+
+</body>
+</html>
